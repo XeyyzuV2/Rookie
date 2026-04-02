@@ -47,7 +47,12 @@ function InputGroupAddon({
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   const focusInput = (element: HTMLDivElement) => {
-    element.parentElement?.querySelector("input, textarea")?.focus();
+    const input =
+      element.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        "input, textarea",
+      );
+
+    input?.focus();
   };
 
   return (
