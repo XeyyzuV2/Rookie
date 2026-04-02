@@ -85,12 +85,10 @@ export default function Home() {
                   </p>
                   <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start lg:gap-4">
                     <Link
-                      href="https://github.com/gurotopia"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href="/docs"
                       className="rounded-lg border-2 border-white bg-white px-4 py-2 text-sm font-semibold text-black transition-all hover:bg-white/90 sm:px-6 sm:py-3 sm:text-base"
                     >
-                      GitHub →
+                      Documentation →
                     </Link>
                     <Link
                       href="#features"

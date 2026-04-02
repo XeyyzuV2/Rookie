@@ -47,6 +47,61 @@ sudo nano /etc/hosts
 
 4. Save with `Ctrl + O`, then exit with `Ctrl + X`
 
+## Server Configuration File
+
+The server configuration is typically stored in a `config.json` or similar file. Here are the common settings:
+
+### Network Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `port` | 17091 | Server listening port |
+| `host` | 0.0.0.0 | Bind address |
+| `max_players` | 100 | Maximum concurrent players |
+
+### Database Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `db_path` | ./data/server.db | SQLite database file path |
+| `backup_interval` | 3600 | Auto-backup interval (seconds) |
+
+### Server Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `server_name` | Gurotopia | Server display name |
+| `maintenance` | false | Enable maintenance mode |
+| `log_level` | info | Logging verbosity |
+
+## Environment Variables
+
+You can also configure the server using environment variables:
+
+```bash
+export GURO_PORT=17091
+export GURO_MAX_PLAYERS=200
+export GURO_DB_PATH=/var/lib/gurotopia/server.db
+```
+
+## SSL/TLS Configuration
+
+For secure connections, configure SSL certificates:
+
+```json
+{
+  "ssl": {
+    "enabled": true,
+    "cert_path": "/path/to/cert.pem",
+    "key_path": "/path/to/key.pem"
+  }
+}
+```
+
+<Callout type="info">
+SSL is optional for local development but recommended for production servers.
+</Callout>
+
 ## Reverting Changes
 
 To connect to official Growtopia servers again, remove or comment out the lines you added to the hosts file:

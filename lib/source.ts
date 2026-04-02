@@ -1,12 +1,13 @@
 import { docs } from '@/.source/server';
 import { loader } from 'fumadocs-core/source';
 import { createElement } from 'react';
-import { BookOpen, Settings, Monitor, Wrench } from 'lucide-react';
+import { BookOpen, CircleHelp, Settings, Monitor, Wrench } from 'lucide-react';
 import { FaWindows, FaLinux } from 'react-icons/fa';
 
 // @note maps icon names to components for sidebar
 const icons = {
   BookOpen,
+  CircleHelp,
   Settings,
   Monitor,
   Wrench,
