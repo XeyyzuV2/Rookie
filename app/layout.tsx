@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { SmoothScroll } from '@/components/layout/smooth-scroll';
+import { WebsiteStructuredData, OrganizationStructuredData, SoftwareApplicationStructuredData } from '@/components/seo/structured-data';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -45,14 +46,14 @@ export const metadata: Metadata = {
   ],
   creator: 'YoruAkio',
   publisher: 'Gurotopia Community',
-  metadataBase: new URL('https://gurotopia.is-a.dev'),
+  metadataBase: new URL('https://gurotopia.yoruakio.xyz'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://gurotopia.is-a.dev',
+    url: 'https://gurotopia.yoruakio.xyz',
     title: 'Gurotopia - Open Source Growtopia Private Server',
     description:
       'A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community.',
@@ -99,7 +100,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <WebsiteStructuredData />
+        <OrganizationStructuredData />
+        <SoftwareApplicationStructuredData />
+      </head>
       <body
         className={`${bricolage.variable} ${geistMono.variable} font-sans antialiased`}
       >

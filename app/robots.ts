@@ -8,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/private/"]
     },
-    sitemap: "https://gurotopia.is-a.dev/sitemap.xml"
+    sitemap: "https://gurotopia.yoruakio.xyz/sitemap.xml"
   };
 }
