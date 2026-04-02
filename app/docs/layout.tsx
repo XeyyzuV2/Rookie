@@ -4,8 +4,6 @@ import type { Metadata } from 'next';
 import { baseOptions } from '../layout.config';
 import { source } from '@/lib/source';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import 'fumadocs-ui/style.css';
-import '@/app/globals.css';
 
 export const metadata: Metadata = {
   title: {

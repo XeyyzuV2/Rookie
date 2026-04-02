@@ -1,17 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { Menu, X, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+
+function useHydrated() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
 
 // @note handles navigation with floating center layout and theme toggle
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+  const hydrated = useHydrated();
 
   const handleToggle = () => {
     if (isOpen) {
@@ -26,17 +34,18 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
 
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const activeTheme = hydrated ? resolvedTheme : undefined;
+  const nextTheme = activeTheme === "dark" ? "light" : "dark";
+  const ThemeIcon = activeTheme === "dark" ? Sun : Moon;
 
   return (
     <nav className={`fixed z-50 w-full transition-all duration-300 ${isScrolled ? "top-0 px-6 py-4" : "top-4 px-4 py-4 md:top-12 md:px-6"}`}>
@@ -76,32 +85,20 @@ export default function Navbar() {
           </div>
 
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(nextTheme)}
             className="hidden rounded-lg border border-border p-2 transition-colors hover:bg-muted md:block"
             aria-label="Toggle theme"
           >
-            {!mounted ? (
-              <Sun className="h-4 w-4" />
-            ) : theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
+            <ThemeIcon className="h-4 w-4" />
           </button>
 
           <div className="flex items-center gap-3 md:hidden">
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(nextTheme)}
               className="rounded-lg border border-border p-2 transition-colors hover:bg-muted"
               aria-label="Toggle theme"
             >
-              {!mounted ? (
-                <Sun className="h-4 w-4" />
-              ) : theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              <ThemeIcon className="h-4 w-4" />
             </button>
             <button
               onClick={handleToggle}

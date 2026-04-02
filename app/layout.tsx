@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { SmoothScroll } from '@/components/layout/smooth-scroll';
 import { WebsiteStructuredData, OrganizationStructuredData, SoftwareApplicationStructuredData } from '@/components/seo/structured-data';
+import 'fumadocs-ui/style.css';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
