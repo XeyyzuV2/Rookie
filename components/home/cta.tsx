@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import Link from "next/link";
+import { motion } from "framer-motion";
 
 export function CTA() {
   return (
@@ -17,18 +17,8 @@ export function CTA() {
           <div className="absolute inset-0 opacity-[0.02]">
             <svg className="h-full w-full">
               <defs>
-                <pattern
-                  id="grid"
-                  width="32"
-                  height="32"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <path
-                    d="M 32 0 L 0 0 0 32"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1"
-                  />
+                <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                  <path d="M 32 0 L 0 0 0 32" fill="none" stroke="currentColor" strokeWidth="1" />
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#grid)" />
@@ -44,9 +34,8 @@ export function CTA() {
                 Ready to build?
               </h2>
               <p className="mb-8 max-w-md text-base leading-relaxed text-muted-foreground">
-                Dive into the Gurotopia source code and start building your own
-                Growtopia private server. Join our Discord community for
-                support.
+                Dive into the Gurotopia source code and start building your own Growtopia private
+                server. Join our Discord community for support.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
@@ -56,12 +45,7 @@ export function CTA() {
                   className="inline-flex items-center gap-2 rounded-lg bg-foreground px-6 py-3 text-sm font-medium text-background transition-all hover:bg-foreground/90"
                 >
                   <span>View on GitHub</span>
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -83,6 +67,7 @@ export function CTA() {
 
             <div className="hidden border-l border-border lg:block">
               <iframe
+                title="gurotopia discord community"
                 src="https://ptb.discord.com/widget?id=1059061437655429160&theme=dark"
                 width="100%"
                 height="100%"

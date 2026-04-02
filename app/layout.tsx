@@ -1,80 +1,84 @@
-import type { Metadata } from 'next';
-import { Bricolage_Grotesque, Geist_Mono } from 'next/font/google';
-import { ThemeProvider } from '@/components/layout/theme-provider';
-import { SmoothScroll } from '@/components/layout/smooth-scroll';
-import { WebsiteStructuredData, OrganizationStructuredData, SoftwareApplicationStructuredData } from '@/components/seo/structured-data';
-import 'fumadocs-ui/style.css';
-import './globals.css';
+import type { Metadata } from "next";
+import { Bricolage_Grotesque, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/layout/theme-provider";
+import { SmoothScroll } from "@/components/layout/smooth-scroll";
+import {
+  WebsiteStructuredData,
+  OrganizationStructuredData,
+  SoftwareApplicationStructuredData,
+} from "@/components/seo/structured-data";
+import "fumadocs-ui/style.css";
+import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
-  variable: '--font-bricolage',
-  subsets: ['latin'],
+  variable: "--font-bricolage",
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Gurotopia - Open Source Growtopia Private Server',
-    template: '%s | Gurotopia',
+    default: "Gurotopia - Open Source Growtopia Private Server",
+    template: "%s | Gurotopia",
   },
   description:
-    'A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community. No bloated dependencies, truly open-source.',
+    "A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community. No bloated dependencies, truly open-source.",
   keywords: [
-    'Growtopia',
-    'private server',
-    'open source',
-    'C++',
-    'Gurotopia',
-    'game server',
-    'growtopia ps',
-    'growtopia private server source',
-    'growtopia server',
-    'gtps',
-    'modern C++',
-    'lightweight server',
-    'from scratch',
-    'growtopia source code',
+    "Growtopia",
+    "private server",
+    "open source",
+    "C++",
+    "Gurotopia",
+    "game server",
+    "growtopia ps",
+    "growtopia private server source",
+    "growtopia server",
+    "gtps",
+    "modern C++",
+    "lightweight server",
+    "from scratch",
+    "growtopia source code",
   ],
   authors: [
     {
-      name: 'YoruAkio',
-      url: 'https://github.com/YoruAkio',
+      name: "YoruAkio",
+      url: "https://github.com/YoruAkio",
     },
   ],
-  creator: 'YoruAkio',
-  publisher: 'Gurotopia Community',
-  metadataBase: new URL('https://gurotopia.yoruakio.xyz'),
+  creator: "YoruAkio",
+  publisher: "Gurotopia Community",
+  metadataBase: new URL("https://gurotopia.yoruakio.xyz"),
   alternates: {
-    canonical: '/',
+    canonical: "/",
   },
   openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://gurotopia.yoruakio.xyz',
-    title: 'Gurotopia - Open Source Growtopia Private Server',
+    type: "website",
+    locale: "en_US",
+    url: "https://gurotopia.yoruakio.xyz",
+    title: "Gurotopia - Open Source Growtopia Private Server",
     description:
-      'A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community.',
-    siteName: 'Gurotopia',
+      "A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community.",
+    siteName: "Gurotopia",
     images: [
       {
-        url: 'https://raw.githubusercontent.com/YoruAkio/ProjectAssets/refs/heads/main/akio/guro/og_image.png',
+        url: "https://raw.githubusercontent.com/YoruAkio/ProjectAssets/refs/heads/main/akio/guro/og_image.png",
         width: 1200,
         height: 630,
-        alt: 'Gurotopia - Open Source Growtopia Private Server',
+        alt: "Gurotopia - Open Source Growtopia Private Server",
       },
     ],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Gurotopia - Open Source Growtopia Private Server',
+    card: "summary_large_image",
+    title: "Gurotopia - Open Source Growtopia Private Server",
     description:
-      'A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community.',
+      "A lightweight, flexible Growtopia private server built from scratch with modern C++. Clean code, unique compiler, and maintained by a dedicated community.",
     images: [
-      'https://raw.githubusercontent.com/YoruAkio/ProjectAssets/refs/heads/main/akio/guro/og_image.png',
+      "https://raw.githubusercontent.com/YoruAkio/ProjectAssets/refs/heads/main/akio/guro/og_image.png",
     ],
   },
   robots: {
@@ -83,15 +87,15 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
   verification: {
-    google: '',
-    yandex: '',
-    yahoo: '',
+    google: "",
+    yandex: "",
+    yahoo: "",
   },
 };
 
@@ -107,9 +111,7 @@ export default function RootLayout({
         <OrganizationStructuredData />
         <SoftwareApplicationStructuredData />
       </head>
-      <body
-        className={`${bricolage.variable} ${geistMono.variable} font-sans antialiased`}
-      >
+      <body className={`${bricolage.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

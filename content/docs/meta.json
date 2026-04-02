@@ -1,10 +1,4 @@
 {
   "title": "Documentation",
-  "pages": [
-    "index",
-    "---[Monitor]Getting Started---",
-    "installation",
-    "faq",
-    "configuration"
-  ]
+  "pages": ["index", "---[Monitor]Getting Started---", "installation", "faq", "configuration"]
 }

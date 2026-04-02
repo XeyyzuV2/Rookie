@@ -9,7 +9,7 @@ function useHydrated() {
   return useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false
+    () => false,
   );
 }
 
@@ -48,8 +48,12 @@ export default function Navbar() {
   const ThemeIcon = activeTheme === "dark" ? Sun : Moon;
 
   return (
-    <nav className={`fixed z-50 w-full transition-all duration-300 ${isScrolled ? "top-0 px-6 py-4" : "top-4 px-4 py-4 md:top-12 md:px-6"}`}>
-      <div className={`mx-auto w-full transition-all duration-300 ${isScrolled ? "max-w-[85%] md:w-[60%]" : "max-w-[90%] md:w-[50%]"}`}>
+    <nav
+      className={`fixed z-50 w-full transition-all duration-300 ${isScrolled ? "top-0 px-6 py-4" : "top-4 px-4 py-4 md:top-12 md:px-6"}`}
+    >
+      <div
+        className={`mx-auto w-full transition-all duration-300 ${isScrolled ? "max-w-[85%] md:w-[60%]" : "max-w-[90%] md:w-[50%]"}`}
+      >
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background/80 px-6 py-2 backdrop-blur-md md:gap-8">
           <Link href="/" className="text-xl font-bold tracking-tight">
             Gurotopia
@@ -100,21 +104,16 @@ export default function Navbar() {
             >
               <ThemeIcon className="h-4 w-4" />
             </button>
-            <button
-              onClick={handleToggle}
-              aria-label="Toggle menu"
-            >
-              {isOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
+            <button onClick={handleToggle} aria-label="Toggle menu">
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
 
         {isOpen && (
-          <div className={`mt-2 w-full rounded-lg border border-border bg-background/80 backdrop-blur-md md:hidden ${isClosing ? "animate-out fade-out slide-out-to-top-2 duration-200" : "animate-in fade-in slide-in-from-top-2 duration-200"}`}>
+          <div
+            className={`mt-2 w-full rounded-lg border border-border bg-background/80 backdrop-blur-md md:hidden ${isClosing ? "animate-out fade-out slide-out-to-top-2 duration-200" : "animate-in fade-in slide-in-from-top-2 duration-200"}`}
+          >
             <div className="space-y-1 px-6 py-4">
               <Link
                 href="#features"
