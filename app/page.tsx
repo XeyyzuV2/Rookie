@@ -84,7 +84,7 @@ export default function Home() {
                     scratch, not another leaked fork.
                   </p>
                   <div className="mx-auto mt-4 inline-flex max-w-fit items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur-sm lg:mx-0">
-                    still in early development
+                    early development
                   </div>
                   <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start lg:gap-4">
                     <Link
