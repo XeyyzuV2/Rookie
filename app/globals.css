@@ -180,3 +180,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* @note overview page section divider */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-divider span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1c1917;
+  white-space: nowrap;
+}
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e7e5e4;
+}
