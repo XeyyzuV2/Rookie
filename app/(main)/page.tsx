@@ -47,7 +47,7 @@ function Token({ children, color }: { children: React.ReactNode; color: string }
   return <span style={{ color }}>{children}</span>;
 }
 
-// @note code block with copy button, mimics boneyard dark code blocks
+// @note code block with copy button
 function CodeBlock({ children, copyText, lang }: { children: React.ReactNode; copyText: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -167,6 +167,15 @@ export default function OverviewPage() {
               </span>
             )}
           </a>
+        </motion.div>
+
+        <motion.div custom={1.5} variants={fadeUp} className="w-full rounded-xl border border-[#e7e5e4] dark:border-white/[0.08] overflow-hidden">
+          <img 
+            src="https://raw.githubusercontent.com/YoruAkio/ProjectAssets/refs/heads/main/akio/guro/gurotopia_banner.png" 
+            alt="Gurotopia Banner" 
+            className="w-full h-auto block select-none scale-[1.2]"
+            draggable={false}
+          />
         </motion.div>
 
         <motion.div custom={2} variants={fadeUp} className="space-y-3 text-[15px] leading-relaxed text-[#78716c] dark:text-white/45 transition-colors">
