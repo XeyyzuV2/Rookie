@@ -5,185 +5,148 @@ icon: ListTodo
 ---
 
 <Callout type="info">
-  These changes are on the 'my-version' branch of XeyyzuV2/Gurotopia.
+  These changes are on the `my-version` branch of [XeyyzuV2/Gurotopia](https://github.com/XeyyzuV2/Gurotopia/tree/my-version).
 </Callout>
 
-## Code Quality and Stability
+## Security & Stability
 
-These commits improve the project's tooling chain, standardise code style, and remove dead code to reduce the maintenance surface.
+### fix: stability, security and build hardening
 
-### chore: add configuration files for oxfmt and oxlint
+Nine foundational fixes to harden the server against crashes and improve project infrastructure:
 
-Replaced the legacy ESLint setup with [oxlint](https://oxc.rs) and [oxfmt](https://oxc.rs/docs/guide/usage.html#oxfmt), a Rust-based linter and formatter that runs significantly faster. The new configuration enables rules from `typescript`, `unicorn`, `oxc`, `react`, `nextjs`, `jsx-a11y`, and `import` plugin categories and treats all correctness issues as errors.
+- **main.cpp**: Added null-check on `enet_host_create()` — if binding to the configured port fails the server now prints an error and exits gracefully instead of dereferencing a null pointer and crashing.
+- **Dockerfile**: Rewritten as a multi-stage build (`ubuntu:24.04`), added `WORKDIR`, `EXPOSE 17091/udp` and `443/tcp`. Runtime image only contains runtime libraries (`libssl3t64`, `libmariadb3`) — no compiler toolchain remains.
+- **.gitignore**: Excluded `resources/ctx/server.key` — the TLS private key is now auto-generated via `scripts/gen-cert.sh` for local dev.
+- **Makefile**: Added dependency on `resources/ctx/server.key` so the cert script runs automatically at build time.
+- **world.hpp**: Replaced fixed `int access[20]` C-array with `std::vector<int>` — eliminates buffer overflow risk and removes the arbitrary 20-entry cap.
+- **database**: Added `std::mutex` (`db_mutex`) guarding every `hStmt` operation. The mutex is acquired in the `hStmt` constructor via `lock_guard`, serialising all MariaDB access across the main thread and the detached HTTPS listener thread.
+- Codacy lint badge cleanup.
 
-```json
-{
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "react",
-    "nextjs",
-    "jsx-a11y",
-    "import"
-  ],
-  "categories": {
-    "correctness": "error"
-  }
-}
-```
+### fix: compile errors and bugs
 
-The corresponding npm scripts were added so you can lint and format with a single command:
+- `tile_change.cpp`: Fixed `lock_visuals` variable scope (moved declaration before if/else blocks, removed duplicate in the placing block).
+- `init_behaviors.cpp`: Removed null-pointer dereference in `on_roulette_wheel` handler.
+- `world_db.cpp`: Fixed `time_point` construction using `steady_clock::time_point() + milliseconds()`.
 
-```json
-{
-  "scripts": {
-    "lint": "oxlint .",
-    "lint:fix": "oxlint . --fix",
-    "format": "oxfmt --write .",
-    "format:check": "oxfmt --check ."
-  }
-}
-```
+### fix: critical compile errors
 
-### chore: update documentation layout and metadata formatting
+- `registry.hpp`: Changed `struct ENetEvent&` to `ENetEvent&` — ENetEvent is a typedef, `struct` prefix is rejected by conforming compilers.
+- `collision.hpp`: Renamed `namespace collision` to `collision_check` to avoid conflict with `enum collision` at global scope.
+- `world_db.cpp`: Fixed dangling pointer — temporary string in `make_bind_in()` parameters array. Moved blob data to a named `std::string` on the stack.
+- `world_db.hpp`: Added missing `#include <string>`.
+- `init_behaviors.cpp`: Fixed `get_weather_id` signature from `int` to `u_int`.
+- `movement.cpp`: Fixed signed/unsigned comparison (`fg_id < items.size()`).
+- `registry.cpp`: Removed unused includes.
 
-Standardised quote usage across the codebase to double quotes and tightened up OpenGraph/Twitter metadata blocks for better social-sharing previews. Keywords and author fields were reformatted for consistency, and several component files were cleaned up as part of the pass.
+### fix: vscode task fix — ucrt64 shell
 
-### chore: remove outdated server configuration details
-
-Deleted the server configuration section from the docs, including environment-variable examples and SSL/TLS configuration that no longer reflected the project's deployment setup. Keeping the documentation aligned with the actual stack prevents confusion for new contributors.
-
-### chore: remove unused browser and server files
-
-Removed `.source/browser.ts` and `.source/server.ts` -- generated files that were no longer referenced by the build pipeline. These were artifacts of an earlier iteration of the fumadocs source setup and were safe to delete.
+Fixed `.vscode/tasks.json` to use `ucrt64.exe` instead of `bash.exe` for `Ctrl+Shift+B` builds, ensuring the proper MSYS2 UCRT64 environment is loaded.
 
 ---
 
-## Documentation Infrastructure
+## Modular Item System
 
-These commits lay the foundation for the documentation site, including the fumadocs source loader, search API, and the initial page structure.
+### feat: modular item system with registry, properties & collision
 
-### feat: init base project
+Introduced a C++ item behavior framework replacing the hardcoded `switch(item->id)` approach:
 
-Scaffolded the Next.js project with TypeScript, Tailwind CSS v4, and fumadocs. Established the base directory layout under `content/docs/` and wired up the MDX loader via `source.config.ts`:
-
-```ts
-import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
-
-export const docs = defineDocs({
-  dir: 'content/docs',
-});
-
-export default defineConfig();
-```
-
-The source loader maps icon names to Lucide and React Icons components for the documentation sidebar:
-
-```ts
-export const source = loader({
-  baseUrl: "/docs",
-  source: docs.toFumadocsSource(),
-  icon(icon) {
-    if (!icon) return;
-    if (icon in icons) {
-      return createElement(icons[icon as keyof typeof icons]);
-    }
-  },
-});
-```
-
-### rework: reworking the home page and adding docs (installation)
-
-Rebuilt the landing page with a new hero section and integrated the documentation sidebar layout. Added the initial installation guides for Windows and Linux under `content/docs/installation/`, giving users clear platform-specific setup instructions.
-
-### feat: changing hero button to docs; updating docs
-
-Replaced the hero call-to-action to point directly at the documentation hub instead of an external link, so new visitors land on the getting-started guides first. Also refreshed the documentation content to match the current state of the project.
-
-### docs: add server file config section; show example usage
-
-Added a dedicated page covering server file configuration, including examples that demonstrate how to customise the Gurotopia server's behaviour through its config file. This bridges the gap for users moving from installation to production setup.
-
-### feat: add FAQ on build errors and server configuration
-
-Created a FAQ section under `content/docs/faq/build-errors.mdx` that addresses common build failures and server misconfiguration pitfalls. The homepage links were updated to keep navigation consistent.
-
----
-
-## User Interface and Experience
-
-Improvements to theme handling, navigation, scroll behaviour, and visual polish.
-
-### feat: update navbar theme toggle functionality
-
-Replaced the ad-hoc `mounted` state check with a proper `useHydrated` hook built on React's `useSyncExternalStore`. This eliminates the flash of incorrect theme on first render and ensures the toggle icon matches the actual resolved theme (light or dark) rather than the stored preference.
-
-```tsx
-function useHydrated() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-}
-
-const activeTheme = hydrated ? resolvedTheme : undefined;
-const nextTheme = activeTheme === "dark" ? "light" : "dark";
-const ThemeIcon = activeTheme === "dark" ? Sun : Moon;
-```
-
-The navbar scroll detection was also moved from a passive listener to an active one by calling `handleScroll()` on mount, preventing a stale initial state.
-
-### feat: update smooth scrolling
-
-Integrated Lenis for smooth, hardware-accelerated scrolling across the documentation site. The smooth-scroll component wraps the main content area and provides a consistent scrolling experience that respects the user's `prefers-reduced-motion` setting.
-
-### feat: adding favicon; adding logo on docs sidebar title
-
-Added a custom favicon so the site stands out in browser tabs. The project logo now also appears next to the sidebar title in the documentation layout, reinforcing brand identity throughout the docs.
-
-### style: update development status text
-
-Simplified the status message on the home page from "still in early development" to "early development" for a more confident tone.
-
-### feat: add Gurotopia banner image to main page
-
-Placed a branded banner image on the landing page to give the site a visual anchor and immediately communicate the project identity to new visitors.
-
----
-
-## Refactoring and Consolidation
-
-Structural changes that keep the codebase maintainable as the project grows.
-
-### refactor: consolidate home page and documentation layout into a unified structure with new sidebar and overview components
-
-Merged the previously separate home and docs layout trees into a single shared structure. Introduced dedicated `Sidebar` and `OverviewContainer` components, making it easier to maintain responsive behaviour and navigation state from one place.
-
----
-
-## Bug Fixes
-
-### fix: improve focus handling in InputGroupAddon
-
-Refactored the `focusInput` callback in the `InputGroupAddon` component to use a typed `querySelector` call instead of an untyped chain. The previous one-liner relied on implicit typing and could silently fail; the new version explicitly casts to `HTMLInputElement | HTMLTextAreaElement` and safely optional-chains the `.focus()` call.
-
-```tsx
-const focusInput = (element: HTMLDivElement) => {
-  const input =
-    element.parentElement?.querySelector<
-      HTMLInputElement | HTMLTextAreaElement
-    >("input, textarea");
-
-  input?.focus();
+**Property flags** (`include/items/properties.hpp`):
+```cpp
+enum item_property : u_char {
+    PROP_DROP_SEED     = 1 << 0,
+    PROP_NO_SEED       = 1 << 1,
+    PROP_DROPLESS      = 1 << 2,
+    PROP_PERMANENT     = 1 << 3,
+    PROP_MULTI_FACING  = 1 << 4,
+    PROP_NO_SHADOW     = 1 << 5,
+    PROP_WRENCHABLE    = 1 << 6,
+    PROP_AUTO_PICKUP   = 1 << 7,
 };
 ```
 
-### seo: fix sitemap docs routes
+**Category flags** (`enum item_category`):
+- `CAT_RETURN`, `CAT_PUBLIC`, `CAT_HOLIDAY`, `CAT_UNTRADEABLE`, `CAT_SURPRISING_FRUIT`
 
-Corrected the sitemap generation to include documentation routes that were previously missing, ensuring search engines index all documentation pages.
+**Behavior Registry** (`include/items/registry.hpp`):
+```cpp
+// Register a handler for any item ID — one line, no core file edits
+item_registry::register_item(758, on_roulette_wheel, "Roulette Wheel");
+item_registry::register_item(3400, on_love_potion, "Love Potion #8");
+// ... 23 items registered
+```
 
-### seo: enhance seo
+**Collision System** (`include/items/collision.hpp`):
+```cpp
+namespace collision_check {
+    bool can_place_at(::collision col, const ::pos& player, const ::pos& target);
+    movement_rule get_movement_rule(::collision col);
+    bool is_passable(::collision col, float px, float py, int tx, int ty, bool falling);
+}
+```
 
-Added structured data components and improved meta tags across the site for better search-engine visibility and richer social-sharing snippets.
+Movement rules: `BLOCK`, `PASS`, `PLATFORM`, `SLAB`, `ONE_WAY_X`, `ONE_WAY_Y`, `ACCESS`, `VIP`, `GUILD`, `ACTIVATE`.
+
+### refactor: complete modular item system migration
+
+- `items.hpp`: Replaced old `cat` enum with `#include "items/properties.hpp"`.
+- `drop.cpp`: Uses `item_category::CAT_UNTRADEABLE`.
+- `tile_change.cpp`: Registry-first dispatch — checks `item_registry::get_handler()` before falling through to type-based logic.
+- `movement.cpp`: Integrated collision checking — players can no longer walk through `FULL` collision tiles, and `PLATFORM` tiles block falling-through.
+
+### refactor: move love chests + provider items to registry, cleanup dead code
+
+- Registered all provider items (Chicken 872, Cow 866, Coffee Maker 1632, Sheep 3888, Tea Set 5116, Well 2798, Science Station 928).
+- Registered Dice (456), Roshambo (1300), and love chests (Heartstone 392, GBC 3402, Super GBC 9350) as registry handlers.
+- Removed dead love chest loot code and provider item-ID switch from `tile_change.cpp`.
+
+**Currently registered items (23):**
+
+| ID | Name | Handler |
+|----|------|---------|
+| 758 | Roulette Wheel | `on_roulette_wheel` |
+| 1404 | Door Mover | `on_door_mover` |
+| 822 | Water Bucket | `on_water_bucket` |
+| 1866 | Block Glue | `on_block_glue` |
+| 3062 | Pocket Lighter | `on_pocket_lighter` |
+| 2480 | Megaphone | `on_megaphone` |
+| 408 | Duct Tape | `on_duct_tape` |
+| 3400 | Love Potion #8 | `on_love_potion` |
+| 1488 | Experience Potion | `on_exp_potion` |
+| 3404/3406 | Lollipops | `on_lollipop` |
+| 3478-3492 | Paint Buckets (8) | `on_paint_*` |
+| 1008 | ATM | `on_atm` |
+| 872 | Chicken | `on_provider_drop_next` |
+| 866 | Cow | `on_provider_drop_next` |
+| 1632 | Coffee Maker | `on_provider_drop_next` |
+| 3888 | Sheep | `on_provider_drop_next` |
+| 5116 | Tea Set | `on_provider_tea_set` |
+| 2798 | Well | `on_provider_well` |
+| 928 | Science Station | `on_provider_science` |
+| 456 | Dice | `on_dice` |
+| 1300 | Roshambo | `on_roshambo` |
+| 392 | Heartstone | `on_love_chest` |
+| 3402 | GBC | `on_love_chest` |
+| 9350 | Super GBC | `on_love_chest` |
+
+---
+
+## World Persistence
+
+### feat: world save/load to database (persistent worlds)
+
+Added full world persistence via MariaDB `MEDIUMBLOB` serialization:
+
+- **Schema**: `world_state` table with `name VARCHAR(100) PRIMARY KEY`, `owner INT`, `data MEDIUMBLOB`, `updated_at TIMESTAMP`.
+- **Serialization**: Versioned binary format containing all 6000 tiles (fg, bg, state[4], hits[2], tick, label) plus doors, displays, random_blocks, objects, last_object_uid, access list, weather, lock state, and owner.
+- **Save**: `save_world()` called when last player leaves (`quit_to_exit.cpp`) and on graceful shutdown (`safe_disconnect_peers` in `peer.cpp`).
+- **Load**: `load_world()` called on world join (`join_request.cpp`). Falls back to `generate_world()` if no DB data exists.
+
+---
+
+## CI & Infrastructure
+
+### ci: activate workflow build setiap push di my-version
+
+- `make.yml`: Filtered branches to `[master, my-version]`, building on both `windows-latest` (MSYS2) and `ubuntu-latest`.
+- `docker.yml`: Filtered branches to `[master, my-version]`, validates `docker build`.
+- `README.md`: Updated badges to point to `XeyyzuV2/Gurotopia` fork.
