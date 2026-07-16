@@ -1,4 +1,4 @@
 {
   "title": "Documentation",
-  "pages": ["index", "---[Monitor]Getting Started---", "installation", "faq", "changelog", "configuration", "architecture"]
+  "pages": ["index", "---[Monitor]Projects---", "gurotopia", "installation", "configuration", "---[Monitor]References---", "architecture", "changelog", "faq"]
 }
