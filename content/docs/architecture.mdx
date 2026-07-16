@@ -1,0 +1,668 @@
+---
+title: Architecture
+description: Technical overview of Gurotopia's modular item system and world persistence
+icon: Blocks
+---
+
+## Item Property System
+
+Every item in Gurotopia is defined by a set of **property bitfield flags** stored in `items.dat`. These flags control how items behave when held, dropped, planted, or otherwise interacted with by the player or the world simulation.
+
+### Property Flags
+
+Properties are stored as a 32-bit unsigned integer bitfield in the item definition record. Each bit represents a single boolean capability.
+
+| Flag | Bit | Value | Description |
+|------|-----|-------|-------------|
+| `PROP_NONE` | 0 | `0x0000` | No special properties |
+| `PROP_DROP_SEED` | 1 | `0x0001` | When the item is dropped on soil, it plants a seed instead of leaving a loose item |
+| `PROP_NO_SEED` | 2 | `0x0002` | Prevents the item from being used as a seed under any circumstance |
+| `PROP_CONSUMABLE` | 3 | `0x0004` | Item is consumed on use (food, potions, etc.) |
+| `PROP_EQUIPPABLE` | 4 | `0x0008` | Item can be equipped to a hotbar or armor slot |
+| `PROP_STACKABLE` | 5 | `0x0010` | Multiple instances can occupy one inventory slot |
+| `PROP_PLACEABLE` | 6 | `0x0020` | Item can be placed as a world tile or decoration |
+| `PROP_TRADABLE` | 7 | `0x0040` | Item may be traded between players |
+| `PROP_DESTROY_ON_DROP` | 8 | `0x0080` | Item is destroyed immediately when dropped from inventory |
+| `PROP_QUEST_ITEM` | 9 | `0x0100` | Item is a quest objective and cannot be dropped or traded |
+| `PROP_CRAFTABLE` | 10 | `0x0200` | Item can be used as an ingredient in crafting recipes |
+| `PROP_TOOL` | 11 | `0x0400` | Item functions as a tool (hoe, axe, pickaxe, etc.) |
+| `PROP_WEAPON` | 12 | `0x0800` | Item deals damage when used |
+| `PROP_ARMOR` | 13 | `0x1000` | Item provides defense when equipped |
+| `PROP_DECORATION` | 14 | `0x2000` | Item is purely decorative (no gameplay function) |
+| `PROP_SELLABLE` | 15 | `0x4000` | Item can be sold to NPC shops |
+
+New flags must be added at the next available bit position to avoid breaking existing data.
+
+### Mapping to items.dat
+
+The `items.dat` binary file stores item definitions in a fixed-record format:
+
+```cpp
+struct ItemRecord {
+    uint32_t id;              // Unique item identifier
+    char     name[64];        // Null-terminated display name
+    uint32_t properties;      // Bitfield of PROP_* flags
+    uint16_t max_stack;       // Maximum stack size (only meaningful if PROP_STACKABLE)
+    uint16_t tier;            // Quality or tier rank (0 = base)
+    uint32_t sell_price;      // Base shop price in gold
+    uint8_t  rarity;          // 0=common, 1=uncommon, 2=rare, 3=epic, 4=legendary
+    uint8_t  padding[3];      // Reserved for future use
+};
+static_assert(sizeof(ItemRecord) == 88);
+```
+
+Records are written sequentially. The file begins with a 4-byte header containing the record count, followed by `count` entries of `ItemRecord`. Lookups use the record index (item ID does **not** necessarily equal the record index; use the `id` field for cross-references).
+
+```cpp
+// Example: loading items.dat
+std::vector<ItemRecord> load_items(const std::string& path) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file) throw std::runtime_error("Cannot open items.dat");
+
+    uint32_t count;
+    file.read(reinterpret_cast<char*>(&count), sizeof(count));
+
+    std::vector<ItemRecord> items(count);
+    file.read(reinterpret_cast<char*>(items.data()), count * sizeof(ItemRecord));
+    return items;
+}
+```
+
+### Adding a New Property
+
+1. Define the new flag in the `ItemProperties` enum (use the next available bit).
+2. Assign the flag in `items.dat` for every item that should carry it.
+3. Handle the new property in the relevant game systems (inventory, world interaction, networking).
+
+```cpp
+enum ItemProperties : uint32_t {
+    PROP_NONE            = 0x0000,
+    PROP_DROP_SEED       = 0x0001,
+    PROP_NO_SEED         = 0x0002,
+    PROP_CONSUMABLE      = 0x0004,
+    PROP_EQUIPPABLE      = 0x0008,
+    PROP_STACKABLE       = 0x0010,
+    PROP_PLACEABLE       = 0x0020,
+    PROP_TRADABLE        = 0x0040,
+    PROP_DESTROY_ON_DROP = 0x0080,
+    PROP_QUEST_ITEM      = 0x0100,
+    PROP_CRAFTABLE       = 0x0200,
+    PROP_TOOL            = 0x0400,
+    PROP_WEAPON          = 0x0800,
+    PROP_ARMOR           = 0x1000,
+    PROP_DECORATION      = 0x2000,
+    PROP_SELLABLE        = 0x4000,
+    // Next flag: 0x8000
+};
+
+bool has_property(uint32_t properties, ItemProperties prop) {
+    return (properties & static_cast<uint32_t>(prop)) != 0;
+}
+```
+
+---
+
+## Behavior Registry
+
+The behavior registry is the central dispatch for per-item runtime logic. Instead of hard-coding item behaviors into every interaction system, each item type registers callbacks that define what happens on use, drop, tick, equip, and unequip.
+
+### Core Class
+
+```cpp
+class item_registry {
+public:
+    using behavior_fn = std::function<void(player&, item_stack&)>;
+    using tick_fn      = std::function<void(item_stack&, world&, float dt)>;
+
+    struct behavior {
+        behavior_fn on_use;
+        behavior_fn on_drop;
+        behavior_fn on_equip;
+        behavior_fn on_unequip;
+        tick_fn     on_tick;       // Called each simulation tick while in world
+        uint32_t    required_props; // Item must have ALL these properties to match
+    };
+
+    // Register a behavior for a specific item ID
+    void register_item(uint32_t item_id, behavior bhv);
+
+    // Register a behavior for all items matching a property mask
+    void register_property_behavior(uint32_t prop_mask, behavior bhv);
+
+    // Lookup at runtime
+    const behavior* find_behavior(uint32_t item_id, uint32_t properties) const;
+
+private:
+    std::unordered_map<uint32_t, behavior>     m_specific;
+    std::vector<std::pair<uint32_t, behavior>> m_property_based;
+};
+```
+
+### How Registration Works
+
+```cpp
+void item_registry::register_item(uint32_t item_id, behavior bhv) {
+    m_specific[item_id] = std::move(bhv);
+}
+
+void item_registry::register_property_behavior(uint32_t prop_mask, behavior bhv) {
+    m_property_based.emplace_back(prop_mask, std::move(bhv));
+}
+```
+
+At lookup time, the registry first checks for an item-specific behavior. If none exists, it falls back to the first property-based behavior whose mask matches the item's properties:
+
+```cpp
+const item_registry::behavior*
+item_registry::find_behavior(uint32_t item_id, uint32_t properties) const {
+    // 1. Exact item match
+    auto it = m_specific.find(item_id);
+    if (it != m_specific.end()) {
+        return &it->second;
+    }
+
+    // 2. Property-based fallback (first match wins)
+    for (const auto& [mask, bhv] : m_property_based) {
+        if ((properties & mask) == mask) {
+            return &bhv;
+        }
+    }
+
+    return nullptr; // No behavior registered — item is inert
+}
+```
+
+### Adding a New Item Behavior
+
+To add behavior for a new item:
+
+```cpp
+// At game startup or module load:
+registry.register_item(ITEM_WOODEN_HOE, {
+    .on_use = [](player& p, item_stack& s) {
+        // Till the soil tile in front of the player
+        if (auto tile = p.get_facing_tile()) {
+            tile->set_type(TILE_TILLED_SOIL);
+            s.durability -= 1;
+            if (s.durability <= 0) s.count = 0;
+        }
+    },
+    .on_drop    = default_drop_handler,
+    .on_equip   = nullptr,
+    .on_unequip = nullptr,
+    .on_tick    = nullptr,
+    .required_props = PROP_TOOL,
+});
+```
+
+For behavior shared across a whole category (e.g., all consumables), use property-based registration:
+
+```cpp
+registry.register_property_behavior(PROP_CONSUMABLE, {
+    .on_use = [](player& p, item_stack& s) {
+        auto& effect = get_consumable_effect(s.item_id);
+        p.apply_effect(effect);
+        s.count -= 1;
+    },
+    // ...
+});
+```
+
+### Best Practices
+
+- Keep behavior callbacks **short and idempotent** where possible — they may be called speculatively for networking prediction.
+- Use `required_props` for validation only; the registry does **not** enforce the mask at registration time.
+- Prefer property-based registration when a group of items shares logic; use item-specific registration for one-off behavior.
+
+---
+
+## Collision System
+
+The collision system lives in the `collision_check` namespace and governs how entities interact with the world grid and each other.
+
+### Core Architecture
+
+```cpp
+namespace collision_check {
+
+enum class collision_type : uint8_t {
+    NONE          = 0,
+    SOLID         = 1,  // Impassable (walls, obstacles)
+    WATER         = 2,  // Swimming required
+    LAVA          = 3,  // Damage on contact
+    NPC_SPAWN     = 4,  // NPC spawn point — walking allowed
+    DANGER        = 5,  // Damages on contact (spikes, fire)
+    TELEPORT      = 6,  // Triggers teleport to linked zone
+    DOOR          = 7,  // Openable/closeable barrier
+    BRIDGE        = 8,  // Solid only when walked on from correct angle
+    SLIPPERY      = 9,  // Momentum persists (ice)
+    // Extend here
+};
+
+struct collision_result {
+    collision_type type;
+    bool           blocked;
+    vec2i          adjusted_position;
+    float          damage;          // Only for DANGER / LAVA
+    std::string    teleport_target; // Only for TELEPORT
+};
+
+collision_result check_tile_collision(const world& w, vec2i pos, entity e);
+collision_result check_entity_collision(const world& w, entity a, entity b);
+
+} // namespace collision_check
+```
+
+### Movement Rules
+
+The movement pipeline runs each tick:
+
+1. **Request**: Entity submits a desired movement delta `(dx, dy)`.
+2. **Tile Check**: `check_tile_collision` is called for the target tile. If `blocked` is true, movement is zeroed and the result returned.
+3. **Entity Check**: If tile is clear, `check_entity_collision` runs against all overlapping entities.
+4. **Adjustment**: The position is clamped to the nearest non-blocked boundary.
+5. **Callback**: Any collision-type-specific side effects are applied (damage, teleport, sound).
+
+```cpp
+vec2i resolve_movement(const world& w, entity e, vec2i desired) {
+    collision_result cr = check_tile_collision(w, desired, e);
+    if (cr.blocked) {
+        return cr.adjusted_position;
+    }
+    // Check nearby entities
+    for (auto& other : w.entities_at(desired)) {
+        if (other.id == e.id) continue;
+        cr = check_entity_collision(w, e, other);
+        if (cr.blocked) return cr.adjusted_position;
+    }
+    return desired;
+}
+```
+
+### Adding a New Collision Type
+
+1. Add a new enumerator to `collision_type` (increment the last value).
+2. Implement the collision logic in the `check_tile_collision` function.
+3. Add any side-effect processing to the movement pipeline callback.
+
+```cpp
+// Step 1: Add the enum value
+enum class collision_type : uint8_t {
+    // ... existing ...
+    ICE = 10, // New: momentum-preserving surface
+};
+
+// Step 2: Handle in check_tile_collision
+collision_result check_tile_collision(const world& w, vec2i pos, entity e) {
+    auto tile = w.get_tile(pos);
+    switch (tile.type) {
+        // ... existing cases ...
+        case TILE_ICE:
+            return { .type = collision_type::ICE, .blocked = false };
+    }
+}
+
+// Step 3: Handle the side effect in the movement pipeline
+vec2i resolve_movement(const world& w, entity e, vec2i desired) {
+    auto result = check_tile_collision(w, desired, e);
+    if (result.type == collision_type::ICE) {
+        // Do not zero momentum — entity keeps sliding
+        e.set_momentum_multiplier(0.95f);
+    }
+    // ...
+}
+```
+
+### Collision Layers
+
+Entities can belong to multiple collision layers, controlling which objects they collide with:
+
+| Layer | Bit | Typical Entities |
+|-------|-----|-----------------|
+| `LAYER_PLAYER` | `1 << 0` | Player characters |
+| `LAYER_NPC` | `1 << 1` | Friendly NPCs |
+| `LAYER_MONSTER` | `1 << 2` | Hostile mobs |
+| `LAYER_PROJECTILE` | `1 << 3` | Arrows, spells |
+| `LAYER_ITEM` | `1 << 4` | Dropped items on ground |
+| `LAYER_WORLD` | `1 << 5` | World geometry |
+
+```cpp
+uint8_t entity_layers(const entity& e) {
+    switch (e.type) {
+        case ENTITY_PLAYER:    return LAYER_PLAYER | LAYER_NPC;
+        case ENTITY_SHEEP:     return LAYER_NPC;
+        case ENTITY_SKELETON:  return LAYER_MONSTER;
+        case ENTITY_ARROW:     return LAYER_PROJECTILE;
+        case ENTITY_DROP:      return LAYER_ITEM;
+    }
+}
+```
+
+---
+
+## World Persistence
+
+World persistence uses a two-tier approach: a **binary serialization format** for efficient runtime save/load, backed by a **relational database** for cross-server coordination and backup.
+
+### Binary Serialization Format
+
+World files use a chunked binary layout designed for fast random access and minimal I/O.
+
+```
+┌──────────────────────────────────┐
+│  Magic: "GTW" (3 bytes)          │
+│  Version: uint16_t               │
+│  World seed: uint32_t            │
+│  Chunk count: uint32_t           │
+├──────────────────────────────────┤
+│  Chunk table (index)             │
+│  ┌────────────────────────────┐  │
+│  │ Chunk 0: offset, size, crc  │  │
+│  │ Chunk 1: offset, size, crc  │  │
+│  │ ...                         │  │
+│  └────────────────────────────┘  │
+├──────────────────────────────────┤
+│  Chunk data (variable)           │
+│  ┌────────────────────────────┐  │
+│  │ Tile IDs (uint16_t[32][32]) │  │
+│  │ Tile variants (uint8_t[...])│  │
+│  │ Entity records              │  │
+│  └────────────────────────────┘  │
+└──────────────────────────────────┘
+```
+
+```cpp
+struct WorldHeader {
+    char     magic[3];       // "GTW"
+    uint16_t version;        // Current: 7
+    uint32_t seed;           // World generation seed
+    uint32_t chunk_count;    // Number of loaded chunks
+};
+
+struct ChunkIndexEntry {
+    uint32_t offset;         // Byte offset from start of file
+    uint32_t size;           // Compressed chunk size
+    uint32_t crc32;          // Integrity checksum
+};
+
+struct ChunkData {
+    uint16_t tiles[32][32];  // Tile ID for each cell
+    // Variable-length after tile grid:
+    //   EntityCount : uint16_t
+    //   EntityRecord entities[EntityCount]
+};
+```
+
+Save is performed as a two-pass operation:
+
+```cpp
+void save_world(const world& w, const std::string& path) {
+    std::ofstream file(path, std::ios::binary);
+
+    // Pass 1: count chunks and write placeholder header
+    WorldHeader header{};
+    header.magic[0] = 'G'; header.magic[1] = 'T'; header.magic[2] = 'W';
+    header.version = 7;
+    header.seed = w.get_seed();
+    header.chunk_count = static_cast<uint32_t>(w.loaded_chunks().size());
+    file.write(reinterpret_cast<const char*>(&header), sizeof(header));
+
+    // Instead of writing index inline (which requires seeking back),
+    // we buffer it and append it after chunk data.
+    std::vector<ChunkIndexEntry> index(header.chunk_count);
+    std::streampos data_start = file.tellp();
+
+    // Pass 2: serialize each chunk
+    for (uint32_t i = 0; i < header.chunk_count; ++i) {
+        auto& chunk = w.loaded_chunks()[i];
+        index[i].offset = static_cast<uint32_t>(file.tellp() - data_start);
+
+        auto serialized = chunk.serialize(); // Compressed blob
+        index[i].size = static_cast<uint32_t>(serialized.size());
+        index[i].crc32 = crc32(serialized);
+
+        file.write(reinterpret_cast<const char*>(serialized.data()), serialized.size());
+    }
+
+    // Pass 3: append chunk index
+    uint32_t index_offset = static_cast<uint32_t>(file.tellp());
+    file.write(reinterpret_cast<const char*>(index.data()),
+               index.size() * sizeof(ChunkIndexEntry));
+
+    // Write index offset at end of file
+    file.write(reinterpret_cast<const char*>(&index_offset), sizeof(index_offset));
+}
+```
+
+### Database Schema
+
+The SQL database serves as the authoritative long-term store. The binary format is a cache of the active region.
+
+```sql
+-- Core world metadata
+CREATE TABLE worlds (
+    world_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    seed        INTEGER NOT NULL,
+    version     INTEGER NOT NULL DEFAULT 7,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Tile data, stored per chunk coordinate
+CREATE TABLE chunks (
+    world_id    INTEGER NOT NULL REFERENCES worlds(world_id),
+    cx          INTEGER NOT NULL,  -- Chunk X coordinate
+    cy          INTEGER NOT NULL,  -- Chunk Y coordinate
+    data        BLOB    NOT NULL,  -- Raw serialized ChunkData
+    crc32       INTEGER NOT NULL,
+    updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (world_id, cx, cy)
+);
+
+-- Dynamic entities (players, NPCs, items)
+CREATE TABLE entities (
+    entity_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    world_id    INTEGER NOT NULL REFERENCES worlds(world_id),
+    entity_type INTEGER NOT NULL,
+    cx          INTEGER NOT NULL,  -- Current chunk X
+    cy          INTEGER NOT NULL,  -- Current chunk Y
+    pos_x       REAL    NOT NULL,
+    pos_y       REAL    NOT NULL,
+    data        BLOB,              -- Type-specific payload
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Per-player inventory snapshots
+CREATE TABLE inventories (
+    player_id   INTEGER NOT NULL REFERENCES players(player_id),
+    world_id    INTEGER NOT NULL REFERENCES worlds(world_id),
+    slot        INTEGER NOT NULL,
+    item_id     INTEGER NOT NULL,
+    count       INTEGER NOT NULL DEFAULT 1,
+    durability  INTEGER NOT NULL DEFAULT 100,
+    PRIMARY KEY (player_id, world_id, slot)
+);
+
+CREATE INDEX idx_chunks_updated ON chunks(world_id, updated_at);
+CREATE INDEX idx_entities_chunk ON entities(world_id, cx, cy);
+```
+
+### Save/Load Lifecycle
+
+```
+                    ┌──────────────────┐
+                    │   Player enters   │
+                    │   server / zone   │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │  Load metadata   │
+                    │  from DB         │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+              ┌────►│  Load chunks in   │
+              │     │  view radius      │
+              │     └────────┬─────────┘
+              │              │
+              │              ▼
+              │     ┌──────────────────┐
+              │     │  Deserialize to   │
+              │     │  binary -> memory │
+              │     └────────┬─────────┘
+              │              │
+              │     ┌──────────────────┐
+              │     │   Simulation     │
+              │     │   runs in RAM    │
+              │     └────────┬─────────┘
+              │              │
+              │     ┌──────────────────┐
+              │     │  Periodic flush   │
+              │     │  (every 30s)      │
+              │     └────────┬─────────┘
+              │              │
+              │              ▼
+              │     ┌──────────────────┐
+              │     │  Serialize chunk  │
+              │     │  -> binary blob   │
+              │     └────────┬─────────┘
+              │              │
+              │              ▼
+              │     ┌──────────────────┐
+              │     │  Write .gtw file  │
+              │     │  (local cache)    │
+              │     └────────┬─────────┘
+              │              │
+              │              ▼
+              │     ┌──────────────────┐
+              │     │  Upsert DB row   │
+              │     │  (async)         │
+              │     └────────┬─────────┘
+              │              │
+              └──────────────┘
+                             │
+                    ┌──────────────────┐
+                    │  Player leaves / │
+                    │  server stop     │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │  Final flush all  │
+                    │  dirty chunks     │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │  Update DB       │
+                    │  + compact .gtw  │
+                    └──────────────────┘
+```
+
+```cpp
+// Core load function
+world load_world(const std::string& db_path, uint32_t world_id) {
+    auto db = open_database(db_path);
+    world w;
+
+    // 1. Load world metadata
+    auto stmt = db.prepare("SELECT seed, version FROM worlds WHERE world_id = ?");
+    stmt.bind(1, world_id);
+    if (stmt.step() == SQLITE_ROW) {
+        w.set_seed(stmt.column_int(0));
+        w.set_version(stmt.column_int(1));
+    }
+
+    // 2. Load active chunks (those near known player positions)
+    auto chunk_stmt = db.prepare(
+        "SELECT cx, cy, data FROM chunks WHERE world_id = ? AND "
+        "((cx BETWEEN ? AND ?) AND (cy BETWEEN ? AND ?))"
+    );
+    chunk_stmt.bind(1, world_id);
+    chunk_stmt.bind(2, w.view_min_x());
+    chunk_stmt.bind(3, w.view_max_x());
+    chunk_stmt.bind(4, w.view_min_y());
+    chunk_stmt.bind(5, w.view_max_y());
+
+    while (chunk_stmt.step() == SQLITE_ROW) {
+        int cx = chunk_stmt.column_int(0);
+        int cy = chunk_stmt.column_int(1);
+        auto blob = chunk_stmt.column_blob(2);
+        w.load_chunk(cx, cy, blob);
+    }
+
+    return w;
+}
+```
+
+### Chunk Dirty Tracking
+
+Only modified chunks are written during periodic saves. Each chunk has a `dirty` flag that is set when any tile or entity within it changes:
+
+```cpp
+void world::mark_chunk_dirty(int cx, int cy) {
+    auto it = m_chunks.find({cx, cy});
+    if (it != m_chunks.end()) {
+        it->second.dirty = true;
+    }
+}
+
+void world::flush_dirty_chunks(const std::string& gt_path, sqlite::database& db) {
+    for (auto& [coord, chunk] : m_chunks) {
+        if (!chunk.dirty) continue;
+
+        auto blob = chunk.serialize();
+        // Write to .gtw cache
+        write_chunk_to_file(gt_path, coord, blob);
+        // Upsert to DB
+        db.exec("INSERT OR REPLACE INTO chunks (world_id, cx, cy, data, crc32, updated_at) "
+                "VALUES (?1, ?2, ?3, ?4, ?5, datetime('now'))",
+                m_world_id, coord.first, coord.second, blob, crc32(blob));
+
+        chunk.dirty = false;
+    }
+}
+```
+
+### Crash Recovery
+
+If the server crashes between periodic flushes, the `.gtw` cache file may contain stale data. On next startup:
+
+1. Compare the `crc32` of each chunk in `.gtw` against the DB record.
+2. If the checksums differ, trust the DB (it was the last successful write).
+3. If a chunk exists in the DB but not in `.gtw`, reload from DB and rebuild the cache.
+
+```cpp
+void recover_from_crash(world& w, const std::string& gt_path, sqlite::database& db) {
+    auto db_chunks = db.prepare("SELECT cx, cy, data, crc32 FROM chunks WHERE world_id = ?");
+    db_chunks.bind(1, w.world_id());
+
+    while (db_chunks.step() == SQLITE_ROW) {
+        int cx = db_chunks.column_int(0);
+        int cy = db_chunks.column_int(1);
+        auto db_data = db_chunks.column_blob(2);
+        uint32_t db_crc = db_chunks.column_int(3);
+
+        auto cache_data = read_chunk_from_cache(gt_path, cx, cy);
+        if (!cache_data || crc32(*cache_data) != db_crc) {
+            // Cache is stale or missing — rebuild from DB
+            w.load_chunk(cx, cy, db_data);
+            write_chunk_to_file(gt_path, {cx, cy}, db_data);
+        }
+    }
+}
+```
+
+---
+
+## Module Registration Checklist
+
+When adding a new module or extension that touches these systems, follow this checklist:
+
+1. **Item properties**: Add flags to `ItemProperties` enum, update `items.dat` records.
+2. **Behavior**: Register behavior callbacks in `item_registry` at startup.
+3. **Collision**: Add `collision_type` enumerator and handling in `check_tile_collision`.
+4. **Persistence**: Ensure new entity/tile types serialize correctly; add DB migration if needed.

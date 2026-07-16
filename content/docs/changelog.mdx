@@ -1,0 +1,189 @@
+---
+title: Changelog
+description: Track all changes and improvements made to Gurotopia
+icon: ListTodo
+---
+
+<Callout type="info">
+  These changes are on the 'my-version' branch of XeyyzuV2/Gurotopia.
+</Callout>
+
+## Code Quality and Stability
+
+These commits improve the project's tooling chain, standardise code style, and remove dead code to reduce the maintenance surface.
+
+### chore: add configuration files for oxfmt and oxlint
+
+Replaced the legacy ESLint setup with [oxlint](https://oxc.rs) and [oxfmt](https://oxc.rs/docs/guide/usage.html#oxfmt), a Rust-based linter and formatter that runs significantly faster. The new configuration enables rules from `typescript`, `unicorn`, `oxc`, `react`, `nextjs`, `jsx-a11y`, and `import` plugin categories and treats all correctness issues as errors.
+
+```json
+{
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "nextjs",
+    "jsx-a11y",
+    "import"
+  ],
+  "categories": {
+    "correctness": "error"
+  }
+}
+```
+
+The corresponding npm scripts were added so you can lint and format with a single command:
+
+```json
+{
+  "scripts": {
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check ."
+  }
+}
+```
+
+### chore: update documentation layout and metadata formatting
+
+Standardised quote usage across the codebase to double quotes and tightened up OpenGraph/Twitter metadata blocks for better social-sharing previews. Keywords and author fields were reformatted for consistency, and several component files were cleaned up as part of the pass.
+
+### chore: remove outdated server configuration details
+
+Deleted the server configuration section from the docs, including environment-variable examples and SSL/TLS configuration that no longer reflected the project's deployment setup. Keeping the documentation aligned with the actual stack prevents confusion for new contributors.
+
+### chore: remove unused browser and server files
+
+Removed `.source/browser.ts` and `.source/server.ts` -- generated files that were no longer referenced by the build pipeline. These were artifacts of an earlier iteration of the fumadocs source setup and were safe to delete.
+
+---
+
+## Documentation Infrastructure
+
+These commits lay the foundation for the documentation site, including the fumadocs source loader, search API, and the initial page structure.
+
+### feat: init base project
+
+Scaffolded the Next.js project with TypeScript, Tailwind CSS v4, and fumadocs. Established the base directory layout under `content/docs/` and wired up the MDX loader via `source.config.ts`:
+
+```ts
+import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
+
+export const docs = defineDocs({
+  dir: 'content/docs',
+});
+
+export default defineConfig();
+```
+
+The source loader maps icon names to Lucide and React Icons components for the documentation sidebar:
+
+```ts
+export const source = loader({
+  baseUrl: "/docs",
+  source: docs.toFumadocsSource(),
+  icon(icon) {
+    if (!icon) return;
+    if (icon in icons) {
+      return createElement(icons[icon as keyof typeof icons]);
+    }
+  },
+});
+```
+
+### rework: reworking the home page and adding docs (installation)
+
+Rebuilt the landing page with a new hero section and integrated the documentation sidebar layout. Added the initial installation guides for Windows and Linux under `content/docs/installation/`, giving users clear platform-specific setup instructions.
+
+### feat: changing hero button to docs; updating docs
+
+Replaced the hero call-to-action to point directly at the documentation hub instead of an external link, so new visitors land on the getting-started guides first. Also refreshed the documentation content to match the current state of the project.
+
+### docs: add server file config section; show example usage
+
+Added a dedicated page covering server file configuration, including examples that demonstrate how to customise the Gurotopia server's behaviour through its config file. This bridges the gap for users moving from installation to production setup.
+
+### feat: add FAQ on build errors and server configuration
+
+Created a FAQ section under `content/docs/faq/build-errors.mdx` that addresses common build failures and server misconfiguration pitfalls. The homepage links were updated to keep navigation consistent.
+
+---
+
+## User Interface and Experience
+
+Improvements to theme handling, navigation, scroll behaviour, and visual polish.
+
+### feat: update navbar theme toggle functionality
+
+Replaced the ad-hoc `mounted` state check with a proper `useHydrated` hook built on React's `useSyncExternalStore`. This eliminates the flash of incorrect theme on first render and ensures the toggle icon matches the actual resolved theme (light or dark) rather than the stored preference.
+
+```tsx
+function useHydrated() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
+const activeTheme = hydrated ? resolvedTheme : undefined;
+const nextTheme = activeTheme === "dark" ? "light" : "dark";
+const ThemeIcon = activeTheme === "dark" ? Sun : Moon;
+```
+
+The navbar scroll detection was also moved from a passive listener to an active one by calling `handleScroll()` on mount, preventing a stale initial state.
+
+### feat: update smooth scrolling
+
+Integrated Lenis for smooth, hardware-accelerated scrolling across the documentation site. The smooth-scroll component wraps the main content area and provides a consistent scrolling experience that respects the user's `prefers-reduced-motion` setting.
+
+### feat: adding favicon; adding logo on docs sidebar title
+
+Added a custom favicon so the site stands out in browser tabs. The project logo now also appears next to the sidebar title in the documentation layout, reinforcing brand identity throughout the docs.
+
+### style: update development status text
+
+Simplified the status message on the home page from "still in early development" to "early development" for a more confident tone.
+
+### feat: add Gurotopia banner image to main page
+
+Placed a branded banner image on the landing page to give the site a visual anchor and immediately communicate the project identity to new visitors.
+
+---
+
+## Refactoring and Consolidation
+
+Structural changes that keep the codebase maintainable as the project grows.
+
+### refactor: consolidate home page and documentation layout into a unified structure with new sidebar and overview components
+
+Merged the previously separate home and docs layout trees into a single shared structure. Introduced dedicated `Sidebar` and `OverviewContainer` components, making it easier to maintain responsive behaviour and navigation state from one place.
+
+---
+
+## Bug Fixes
+
+### fix: improve focus handling in InputGroupAddon
+
+Refactored the `focusInput` callback in the `InputGroupAddon` component to use a typed `querySelector` call instead of an untyped chain. The previous one-liner relied on implicit typing and could silently fail; the new version explicitly casts to `HTMLInputElement | HTMLTextAreaElement` and safely optional-chains the `.focus()` call.
+
+```tsx
+const focusInput = (element: HTMLDivElement) => {
+  const input =
+    element.parentElement?.querySelector<
+      HTMLInputElement | HTMLTextAreaElement
+    >("input, textarea");
+
+  input?.focus();
+};
+```
+
+### seo: fix sitemap docs routes
+
+Corrected the sitemap generation to include documentation routes that were previously missing, ensuring search engines index all documentation pages.
+
+### seo: enhance seo
+
+Added structured data components and improved meta tags across the site for better search-engine visibility and richer social-sharing snippets.
