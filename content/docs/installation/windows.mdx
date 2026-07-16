@@ -32,7 +32,7 @@ Before you begin, you'll need to install the following tools:
 Open your MSYS2 folder (e.g., `C:\msys64`) and launch `ucrt64.exe`. Then run:
 
 ```bash
-pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,openssl,sqlite} make
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,openssl,mariadb} make
 ```
 
 This installs:
@@ -45,7 +45,7 @@ This installs:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/gurotopia/Gurotopia.git
+git clone https://github.com/XeyyzuV2/Gurotopia.git
 cd Gurotopia
 ```
 
@@ -80,7 +80,7 @@ Make sure MSYS2's bin directory is in your system PATH:
 Run the pacman command again to ensure all packages are installed:
 ```bash
 pacman -Syu
-pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,openssl,sqlite} make
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,openssl,mariadb} make
 ```
 
 ### VSCode can't find compiler

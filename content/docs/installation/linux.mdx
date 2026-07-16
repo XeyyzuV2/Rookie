@@ -19,21 +19,21 @@ Choose your distribution and run the appropriate commands:
 ### Arch Linux
 
 ```bash
-sudo pacman -S base-devel openssl sqlite
+sudo pacman -S base-devel openssl mariadb
 ```
 
 ### Debian / Ubuntu
 
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential libssl-dev openssl sqlite3
+sudo apt-get install build-essential libssl-dev openssl mariadb3
 ```
 
 ### Fedora
 
 ```bash
 sudo dnf groupinstall "Development Tools"
-sudo dnf install openssl-devel sqlite-devel
+sudo dnf install openssl-devel mariadb-devel
 ```
 
 <Callout type="info">
@@ -43,7 +43,7 @@ The `build-essential` or `base-devel` package includes GCC, G++, and Make.
 ## Clone the Repository
 
 ```bash
-git clone https://github.com/gurotopia/Gurotopia.git
+git clone https://github.com/XeyyzuV2/Gurotopia.git
 cd Gurotopia
 ```
 
@@ -127,10 +127,10 @@ chmod +x main.out
 If you get "library not found" errors, ensure all dependencies are installed:
 ```bash
 # Debian/Ubuntu
-sudo apt-get install libssl-dev libsqlite3-dev
+sudo apt-get install libssl-dev libmariadb3-dev
 
 # Arch
-sudo pacman -S openssl sqlite
+sudo pacman -S openssl mariadb
 ```
 
 ### Port already in use

@@ -47,6 +47,39 @@ sudo nano /etc/hosts
 
 4. Save with `Ctrl + O`, then exit with `Ctrl + X`
 
+## Server Data Configuration
+
+The `server_data.php` file is auto-generated on first run with default values. To customize:
+
+```
+server|127.0.0.1
+port|17091
+type|1
+type2|1
+#maint|Server under maintenance. Please try again later.
+loginurl|login-gurotopia.vercel.app
+meta|gurotopia
+RTENDMARKERBS1001
+```
+
+Edit this file before starting the server to change the IP, port, or maintenance message.
+
+## Database Configuration
+
+The `database.cfg` file is auto-generated on first run. It uses a pipe-delimited format:
+
+```
+host|127.0.0.1
+user|root
+password|
+```
+
+Edit this file to point to your MariaDB server before starting.
+
+<Callout type="warn">
+Gurotopia uses **MariaDB** (not SQLite). Make sure MariaDB is installed and running before starting the server.
+</Callout>
+
 ## Reverting Changes
 
 To connect to official Growtopia servers again, remove or comment out the lines you added to the hosts file:
