@@ -1,8 +1,7 @@
 {
-  "name": "xeyyzu-dev",
+  "name": "guro-website",
   "version": "0.1.0",
   "private": true,
-  "description": "Portfolio & documentation hub for Xeyyzu projects — Gurotopia, Rookie, and more.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
