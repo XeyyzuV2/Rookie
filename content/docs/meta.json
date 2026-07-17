@@ -1,4 +1,4 @@
 {
   "title": "Documentation",
-  "pages": ["index", "---[Monitor]Getting Started---", "installation", "configuration", "---[Monitor]References---", "architecture", "changelog", "faq"]
+  "pages": ["index", "changelog", "architecture", "---[Monitor]Getting Started---", "installation", "configuration", "---[Monitor]Help---", "faq"]
 }
