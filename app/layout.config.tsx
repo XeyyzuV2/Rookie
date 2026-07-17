@@ -31,6 +31,11 @@ export const baseOptions: BaseLayoutProps = {
       url: '/docs/architecture',
       active: 'nested-url',
     },
+    {
+      text: 'FAQ',
+      url: '/docs/faq/build-errors',
+      active: 'nested-url',
+    },
   ],
   githubUrl: 'https://github.com/XeyyzuV2',
 };
