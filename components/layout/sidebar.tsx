@@ -9,6 +9,8 @@ import { useTheme } from "next-themes";
 const navItems = [
   { href: "/", label: "Overview" },
   { href: "/introduction", label: "Introduction" },
+  { href: "/changelog", label: "Changelog" },
+  { href: "/architecture", label: "Architecture" },
 ];
 
 const guidesItems = [
@@ -19,7 +21,7 @@ const guidesItems = [
 ];
 
 const externalLinks = [
-  { href: "https://github.com/gurotopia", label: "GitHub" },
+  { href: "https://github.com/XeyyzuV2", label: "GitHub" },
   { href: "https://discord.gg/zzWHgzaF7J", label: "Discord" },
 ];
 
